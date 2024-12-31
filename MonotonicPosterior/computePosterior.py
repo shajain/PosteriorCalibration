@@ -6,6 +6,7 @@ from MonotonicPosterior.model import BinaryClassifier
 from MonotonicPosterior.loss import LossBCEMonotonic
 from MonotonicPosterior.loss import LossBCEMonotonicAlpha
 import torch.optim as optim
+from scipy.stats import trim_mean
 import numpy as np
 import torch
 import copy
@@ -22,7 +23,11 @@ def computePosteriorFromEnsemble(X, y, alpha=None, test_size=0.2, num_ensemble=1
         Ensemble.append(model)
     [model.eval() for model in Ensemble]
     modelAvg_Func = lambda x: np.mean(np.hstack([model(x).detach().numpy() for model in Ensemble]), axis=1, keepdims=True)
-    return modelAvg_Func, Ensemble
+    modelMedian_Func = lambda x: np.median(np.hstack([model(x).detach().numpy() for model in Ensemble]), axis=1,
+                                      keepdims=True)
+    modelRobustMean_Func = lambda x: np.apply_along_axis(trim_mean, axis=1, arr=np.hstack([model(x).detach().numpy() for model in Ensemble]), proportiontocut=0.2)
+
+    return modelAvg_Func, modelMedian_Func, modelRobustMean_Func, Ensemble
 
 def computePosterior(X, y, alpha=None, test_size=0.2, num_layers=5, width=5,
                      learning_rate=0.001, batch_size=0.2, epochs=500):
